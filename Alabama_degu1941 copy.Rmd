@@ -43,15 +43,8 @@ alabama <- pdf_text("Alabama_subset.pdf") %>%
   readr::read_lines()
 ```
 
-```{r view_data}
-alabama %>%
-  str_squish()
-```
-
 ```{r}
 alabama_index <- alabama[5:46]
-
-alabama_index
 ```
 
 ```{r}
@@ -79,9 +72,6 @@ name_alabama_index <- name_alabama_index %>%
   str_squish()
 last_digit_alabama_index <- last_digit_alabama_index %>%
   str_squish()
-
-name_alabama_index
-last_digit_alabama_index
 ```
 
 ```{r}
@@ -104,14 +94,6 @@ alabama_file3 <- alabama_file2[[1]]
 final_alabama_file <- alabama_file3[88:length(alabama_file3)]
 ```
 
-```{r}
-final_alabama_file
-company_name <- final_alabama_file[1:443]
-```
-
-```{r}
-company_name
-```
 
 ```{r}
 count_company <- 0
@@ -314,7 +296,7 @@ colnames(table_alabama_company2) = c("Company Name", "State", "Company Code",
                                      "Electric Customers", 
                                      "Energy Purchased (Kilowatt/hour)")
 
-write.csv (table_alabama_company2, file = paste0('table_alabama_company_1941', '.csv'))
+write.csv (table_alabama_company2, file = paste0('alabama_table_company_1941', '.csv'))
 ```
 
 
