@@ -93,13 +93,6 @@ arizona_company_ec <- vector(mode="character")
 arizona_company_p <- vector(mode="character")
 ```
 
-```{r}
-if (str_detect(final_arizona_file[2], "02-")) {
-  string <- 1
-}
-string
-```
-
 
 ```{r}
 for (i in 3:length(final_arizona_file)) {
