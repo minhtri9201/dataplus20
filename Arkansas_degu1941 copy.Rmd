@@ -1,0 +1,301 @@
+---
+title: "Testing in Arkansas"
+author: "Tri Truong"
+date: "6/2/2020"
+output: 
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, 
+                      message = FALSE, warning = FALSE,
+                      fig.height=6, fig.width = 9, fig.align = "center")
+```
+
+# Packages
+
+```{r load-packages, message = FALSE}
+library(stringr)
+library(dplyr)
+library(pdftools)
+library(tidyverse)
+library(pdftables)
+library(qpdf)
+library(rJava)
+library(tabulizer)
+library(tabulizerjars)
+```
+
+# PDF
+
+```{r load_pdf_Alabama}
+pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 110:121, output= "Arkansas_subset.pdf")
+```
+
+
+```{r}
+arkansas_file <- tabulizer::extract_text("Arkansas_subset.pdf")
+arkansas_file2 <- str_split(arkansas_file, "\n")
+arkansas_file3 <- arkansas_file2[[1]]
+experiment_arkansas <- arkansas_file3[4:71]
+final_arkansas_file <- arkansas_file3[73:length(arkansas_file3)]
+```
+
+```{r}
+for (i in 1:length(experiment_arkansas)) {
+  if(str_detect(experiment_arkansas[i], "03-") == FALSE & !is.na(experiment_arkansas[i])) {
+    experiment_arkansas[i] <- paste(experiment_arkansas[i], experiment_arkansas[i+1], sep = "")
+    experiment_arkansas[i+1] <- NA
+  }
+}
+experiment_arkansas <- experiment_arkansas %>%
+  na.omit()
+```
+
+```{r}
+arkansas_index_company_name <- vector(mode="character", length=11)
+arkansas_index_company_code <- vector(mode="character", length=11)
+
+tracking_number <- 1
+
+for (i in 1:length(experiment_arkansas)) {
+  string <- experiment_arkansas[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arkansas_index_company_code[tracking_number] <- paste(something, collapse = '-')
+  vector_string <- str_split(string, "03")
+  vector_string <- vector_string[[1]]
+  arkansas_index_company_name[tracking_number] <- vector_string[1]
+  tracking_number <- tracking_number + 1
+}
+
+table_arkansas_index <- data.frame(arkansas_index_company_name, arkansas_index_company_code)
+write.csv(table_arkansas_index, file = "arkansas_index.csv")
+```
+
+```{r}
+vector_company <- vector(mode="character", length=11)
+vector_company_copy <- vector(mode="character", length=1)
+
+company_position <- 1
+last_position <- 1
+track_vector <- 1
+tracking_data_frame <- 1
+
+arkansas_company_code <- vector(mode="character")
+arkansas_company_name <- vector(mode="character")
+arkansas_company_eup <- vector(mode="character")
+arkansas_company_eor <- vector(mode="character")
+arkansas_company_ec <- vector(mode="character")
+arkansas_company_p <- vector(mode="character")
+```
+
+```{r}
+for (i in 3:length(final_arkansas_file)) {
+  if (str_detect(final_arkansas_file[i], '03-')) {
+    arkansas_companies <- final_arkansas_file[last_position:i-1]
+    
+    track_vector2 <- 1
+    
+    for (k in 1:length(arkansas_companies)) {
+      if (str_detect(arkansas_companies[k], '03-')) {
+        vector_company[track_vector] <- arkansas_companies[k]
+        vector_company[track_vector+1] <- arkansas_companies[k+1]
+        track_vector <- track_vector + 2
+        
+        vector_company_copy[track_vector2] <- arkansas_companies[k]
+        vector_company_copy[track_vector2 + 1] <- arkansas_companies[k+1]
+        track_vector2 <- track_vector2 + 2
+      }
+      
+      if (str_detect(arkansas_companies[k], "Electric Utility Plant")) {
+        vector_company[track_vector] <- arkansas_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[track_vector2] <- arkansas_companies[k]
+        track_vector2 <- track_vector2 + 1
+      }
+      
+      if (str_detect(arkansas_companies[k], "Electric Operating Revenues")) {
+        vector_company[track_vector] <- arkansas_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[track_vector2] <- arkansas_companies[k]
+        track_vector2 <- track_vector2 + 1
+      }
+      
+      if (str_detect(arkansas_companies[k], "Electric Customers")) {
+        vector_company[track_vector] <- arkansas_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[track_vector2] <- arkansas_companies[k]
+        track_vector2 <- track_vector2 + 1
+      }
+      
+      if(str_detect(arkansas_companies[k], "Purchased")) {
+        vector_company[track_vector] <- arkansas_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[track_vector2] <- arkansas_companies[k]
+        track_vector2 <- track_vector2 + 1
+      }
+    #  break
+    }
+    
+    arkansas_company_code[tracking_data_frame] <- vector_company_copy[1]
+    arkansas_company_name[tracking_data_frame] <- vector_company_copy[2]
+    
+    if(str_detect(vector_company_copy[3], "Electric Utility Plant")) {
+      arkansas_company_eup[tracking_data_frame] <- vector_company_copy[3]
+    } else {
+      arkansas_company_eup[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[4], "Electric Operating Revenues")) {
+      arkansas_company_eor[tracking_data_frame] <- vector_company_copy[4]
+    } else {
+      arkansas_company_eor[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[5], "Electric Customers")) {
+      arkansas_company_ec[tracking_data_frame] <- vector_company_copy[5]
+    } else {
+      arkansas_company_ec[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[6], "Purchased")) {
+      arkansas_company_p[tracking_data_frame] <- vector_company_copy[6]
+    } else {
+      arkansas_company_p[tracking_data_frame] <- NA
+    }
+
+    tracking_data_frame <- tracking_data_frame + 1
+    company_position <- company_position + 1
+    last_position <- i+1
+  }
+}
+```
+
+
+```{r}
+for (i in 1:length(arkansas_company_code)) {
+  if (startsWith(arkansas_company_code[i], "0") == FALSE) {
+    arkansas_company_code[i] <- gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "", 
+                                     arkansas_company_code[i], perl=T)
+  }
+}
+
+
+for (i in 1:length(arkansas_company_eup)) {
+  string <- arkansas_company_eup[i]
+  string_vector <- str_split(string, "\\$")
+  arkansas_company_eup[i] <- string_vector[[1]][2]
+}
+
+for (i in 1:length(arkansas_company_eup)) {
+  string <- arkansas_company_eup[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arkansas_company_eup[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arkansas_company_eup)) {
+  if (arkansas_company_eup[i] == "") {
+    arkansas_company_eup[i] <- NA
+  }
+}
+
+for (i in 1:length(arkansas_company_eor)) {
+  string <- arkansas_company_eor[i]
+  string_vector <- str_split(string, "\\$")
+  arkansas_company_eor[i] <- string_vector[[1]][2]
+}
+
+for (i in 1:length(arkansas_company_eor)) {
+  string <- arkansas_company_eor[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arkansas_company_eor[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arkansas_company_eor)) {
+  if (arkansas_company_eor[i] == "") {
+    arkansas_company_eor[i] <- NA
+  }
+}
+
+
+for (i in 1:length(arkansas_company_ec)) {
+  string <- arkansas_company_ec[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arkansas_company_ec[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arkansas_company_ec)) {
+  if (arkansas_company_ec[i] == "") {
+    arkansas_company_ec[i] <- NA
+  }
+}
+
+
+for (i in 1:length(arkansas_company_p)) {
+  string <- arkansas_company_p[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arkansas_company_p[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arkansas_company_p)) {
+  if (arkansas_company_p[i] == "") {
+    arkansas_company_p[i] <- NA
+  }
+}
+```
+
+```{r}
+state_name <- "Arkansas"
+table_arkansas_company2 <- data.frame(arkansas_company_name, state_name, 
+                                     arkansas_company_code, 
+                                     arkansas_company_eup, arkansas_company_eor,
+                                     arkansas_company_ec, arkansas_company_p)
+
+colnames(table_arkansas_company2) = c("Company Name", "State", "Company Code", 
+                                     "Electric Utility Plant (dollars)", 
+                                     "Electric Operating Revenues (dollars)",
+                                     "Electric Customers", 
+                                     "Energy Purchased (Kilowatt/hour)")
+
+write.csv (table_arkansas_company2, file = paste0('arkansas_table_company_1941', '.csv'))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
