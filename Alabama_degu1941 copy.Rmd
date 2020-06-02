@@ -29,69 +29,52 @@ library(tabulizerjars)
 
 # PDF
 
-```{r load_data}
-text <- pdf_text("1941.Directory of electric utilities in the US pdf.pdf") %>%
-  readr::read_lines()
-```
-
 ```{r load_pdf_Alabama}
 pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 86:99, output= "Alabama_subset.pdf")
 ```
 
-```{r Alabama_table}
-alabama <- pdf_text("Alabama_subset.pdf") %>%
-  readr::read_lines()
-```
-
 ```{r}
-alabama_index <- alabama[5:46]
-```
-
-```{r}
-substrRight <- function(x, n){
-  substr(x, nchar(x)-n+1, nchar(x))
-}
-substrLeft = function (string,char) {
-    substr(string,1,char)
-}
-```
-
-```{r}
-last_digit_alabama_index <- vector(mode="character", length=84)
-name_alabama_index <- vector(mode="character", length=84)
-for (i in 1:42) {
-  last_digit_alabama_index[i] <- substr(alabama_index[i],49,55)
-  name_alabama_index[i] <- substrLeft(alabama_index[i],48)
-}
-for (i in 1:42) {
-  last_digit_alabama_index[i+42] <- substrRight(alabama_index[i],6)
-  name_alabama_index[i+42] <- substr(alabama_index[i],57,102)
-}
-
-name_alabama_index <- name_alabama_index %>%
-  str_squish()
-last_digit_alabama_index <- last_digit_alabama_index %>%
-  str_squish()
-```
-
-```{r}
-table_alabama_index <- data.frame(name_alabama_index, last_digit_alabama_index)
-table_alabama_index <- table_alabama_index %>%
-  # recode empty strings "" by NAs
-  na_if("") 
-
-table_alabama_index <- table_alabama_index[grep('01', table_alabama_index$last_digit_alabama_index),]
-write.csv(table_alabama_index, file = "alabama_index.csv")
-```
-
-```{r}
-alabama_data <- alabama[47:length(alabama)]
 alabama_file <- tabulizer::extract_text("Alabama_subset.pdf")
 alabama_file2 <- str_split(alabama_file, "\n")
 alabama_file3 <- alabama_file2[[1]]
 final_alabama_file <- alabama_file3[88:length(alabama_file3)]
+experiment_alabama <- alabama_file3[5:43]
 ```
 
+
+```{r}
+for (i in 1:length(experiment_alabama)) {
+  if(str_detect(experiment_alabama[i], "01-") == FALSE & !is.na(experiment_alabama[i])) {
+    experiment_alabama[i] <- paste(experiment_alabama[i], experiment_alabama[i+1], sep = "")
+    experiment_alabama[i+1] <- NA
+  }
+}
+experiment_alabama <- experiment_alabama %>%
+  na.omit()
+```
+
+
+```{r}
+alabama_index_company_name <- vector(mode="character", length=11)
+alabama_index_company_code <- vector(mode="character", length=11)
+
+tracking_number <- 1
+
+for (i in 1:length(experiment_alabama)) {
+  string <- experiment_alabama[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  alabama_index_company_code[tracking_number] <- paste(something, collapse = '-')
+  vector_string <- str_split(string, "01")
+  vector_string <- vector_string[[1]]
+  alabama_index_company_name[tracking_number] <- vector_string[1]
+  tracking_number <- tracking_number + 1
+}
+
+table_alabama_index <- data.frame(alabama_index_company_name, alabama_index_company_code)
+write.csv(table_alabama_index, file = "alabama_index.csv")
+```
 
 ```{r}
 count_company <- 0
@@ -296,6 +279,3 @@ colnames(table_alabama_company2) = c("Company Name", "State", "Company Code",
 
 write.csv (table_alabama_company2, file = paste0('alabama_table_company_1941', '.csv'))
 ```
-
-
-
