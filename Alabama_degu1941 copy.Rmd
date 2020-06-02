@@ -78,9 +78,7 @@ last_digit_alabama_index <- last_digit_alabama_index %>%
 table_alabama_index <- data.frame(name_alabama_index, last_digit_alabama_index)
 table_alabama_index <- table_alabama_index %>%
   # recode empty strings "" by NAs
-  na_if("") %>%
-  # remove NAs
-  na.omit
+  na_if("") 
 
 table_alabama_index <- table_alabama_index[grep('01', table_alabama_index$last_digit_alabama_index),]
 write.csv(table_alabama_index, file = "alabama_index.csv")
