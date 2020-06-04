@@ -1,0 +1,234 @@
+---
+title: "Testing in Alabama"
+author: "Tri Truong"
+date: "6/2/2020"
+output: 
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, 
+                      message = FALSE, warning = FALSE,
+                      fig.height=6, fig.width = 9, fig.align = "center")
+```
+
+# Packages
+
+```{r load-packages, message = FALSE}
+library(stringr)
+library(dplyr)
+library(pdftools)
+library(tidyverse)
+library(pdftables)
+library(qpdf)
+library(rJava)
+library(tabulizer)
+library(tabulizerjars)
+```
+
+# PDF
+
+```{r load_pdf_Alabama}
+pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 86:99, output= "Alabama_subset.pdf")
+```
+
+```{r}
+alabama_file <- tabulizer::extract_text("Alabama_subset.pdf")
+alabama_file2 <- str_split(alabama_file, "\n")
+alabama_file3 <- alabama_file2[[1]]
+final_alabama_file <- alabama_file3[88:length(alabama_file3)]
+```
+
+
+```{r}
+vector_company <- vector(mode="character", length=11)
+
+company_position <- 1
+last_position <- 1
+track_vector <- 1
+tracking_data_frame <- 1
+
+alabama_company_code <- vector(mode="character")
+alabama_company_name <- vector(mode="character")
+alabama_company_eup <- vector(mode="character")
+alabama_company_eor <- vector(mode="character")
+alabama_company_ec <- vector(mode="character")
+alabama_company_p <- vector(mode="character")
+
+for (i in 3:length(final_alabama_file)) {
+  if (str_detect(final_alabama_file[i], "01-")) {
+    alabama_companies <- final_alabama_file[last_position:i-1]
+    
+    vector_company_copy <- vector(mode="character", length=1)
+    
+    for (k in 1:length(alabama_companies)) {
+      if (str_detect(alabama_companies[k], "01-")) {
+        vector_company[track_vector] <- alabama_companies[k]
+        vector_company[track_vector+1] <- alabama_companies[k+1]
+        track_vector <- track_vector + 2
+        
+        vector_company_copy[1] <- alabama_companies[k]
+        vector_company_copy[2] <- alabama_companies[k+1]
+      }
+      
+      if (str_detect(alabama_companies[k], "Utility Plant")) {
+        vector_company[track_vector] <- alabama_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[3] <- alabama_companies[k]
+      }
+      
+      if (str_detect(alabama_companies[k], "Operating Revenue")) {
+        vector_company[track_vector] <- alabama_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[4] <- alabama_companies[k]
+      }
+      
+      if (str_detect(alabama_companies[k], "Customers")) {
+        vector_company[track_vector] <- alabama_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[5] <- alabama_companies[k]
+      }
+      
+      if(str_detect(alabama_companies[k], "Purchased")) {
+        vector_company[track_vector] <- alabama_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[6] <- alabama_companies[k]
+      }
+    }
+    
+    alabama_company_code[tracking_data_frame] <- vector_company_copy[1]
+    alabama_company_name[tracking_data_frame] <- vector_company_copy[2]
+    
+    if(str_detect(vector_company_copy[3], "Utility Plant") & !is.na(vector_company_copy[3])) {
+      alabama_company_eup[tracking_data_frame] <- vector_company_copy[3]
+    } else {
+      alabama_company_eup[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[4], "Operating Revenue") & !is.na(vector_company_copy[4])) {
+      alabama_company_eor[tracking_data_frame] <- vector_company_copy[4]
+    } else {
+      alabama_company_eor[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[5], "Customers") & !is.na(vector_company_copy[5])) {
+      alabama_company_ec[tracking_data_frame] <- vector_company_copy[5]
+    } else {
+      alabama_company_ec[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[6], "Purchased") & !is.na(vector_company_copy[6])) {
+      alabama_company_p[tracking_data_frame] <- vector_company_copy[6]
+    } else {
+      alabama_company_p[tracking_data_frame] <- NA
+    }
+    tracking_data_frame <- tracking_data_frame + 1
+    
+    company_position <- company_position + 1
+    last_position <- i+1
+  }
+}
+```
+
+```{r}
+for (i in 1:length(alabama_company_code)) {
+  if (startsWith(alabama_company_code[i], "0") == FALSE) {
+    alabama_company_code[i] <- gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "", alabama_company_code[i], perl=T)
+  }
+}
+
+
+for (i in 1:length(alabama_company_eup)) {
+  string <- alabama_company_eup[i]
+  string_vector <- str_split(string, "\\$")
+  alabama_company_eup[i] <- string_vector[[1]][2]
+}
+
+for (i in 1:length(alabama_company_eup)) {
+  string <- alabama_company_eup[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  alabama_company_eup[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(alabama_company_eup)) {
+  if (alabama_company_eup[i] == "") {
+    alabama_company_eup[i] <- NA
+  }
+}
+
+
+for (i in 1:length(alabama_company_eor)) {
+  string <- alabama_company_eor[i]
+  string_vector <- str_split(string, "\\$")
+  alabama_company_eor[i] <- string_vector[[1]][2]
+}
+
+for (i in 1:length(alabama_company_eor)) {
+  string <- alabama_company_eor[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  alabama_company_eor[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(alabama_company_eor)) {
+  if (alabama_company_eor[i] == "") {
+    alabama_company_eor[i] <- NA
+  }
+}
+
+
+for (i in 1:length(alabama_company_ec)) {
+  string <- alabama_company_ec[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  alabama_company_ec[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(alabama_company_ec)) {
+  if (alabama_company_ec[i] == "") {
+    alabama_company_ec[i] <- NA
+  }
+}
+
+
+for (i in 1:length(alabama_company_p)) {
+  string <- alabama_company_p[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  alabama_company_p[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(alabama_company_p)) {
+  if (alabama_company_p[i] == "") {
+    alabama_company_p[i] <- NA
+  }
+}
+
+
+state_name <- "Alabama"
+table_alabama_company2 <- data.frame(alabama_company_name, state_name, 
+                                     alabama_company_code, 
+                                     alabama_company_eup, alabama_company_eor,
+                                     alabama_company_ec, alabama_company_p)
+
+colnames(table_alabama_company2) = c("Company Name", "State", "Company Code", 
+                                     "Electric Utility Plant (dollars)", 
+                                     "Electric Operating Revenues (dollars)",
+                                     "Electric Customers", 
+                                     "Energy Purchased (Kilowatt/hour)")
+
+write.csv (table_alabama_company2, file = paste0('alabama_table_company_1941', '.csv'))
+```
+
+
+

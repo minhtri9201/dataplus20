@@ -1,0 +1,245 @@
+---      
+title: "Testing in Oklahoma"      
+author: "Tri Truong"      
+date: "6/4/2020"      
+output:       
+  pdf_document: default      
+  html_document: default      
+---      
+       
+```{r setup, include=FALSE}      
+knitr::opts_chunk$set(echo = TRUE, comment = NA,       
+                      message = FALSE, warning = FALSE,      
+                      fig.height=6, fig.width = 9, fig.align = "center")      
+```      
+       
+# Packages      
+       
+```{r load-packages, message = FALSE}      
+library(stringr)      
+library(dplyr)      
+library(pdftools)      
+library(tidyverse)      
+library(pdftables)      
+library(qpdf)      
+library(rJava)      
+library(tabulizer)      
+library(tabulizerjars)      
+```      
+       
+# PDF      
+       
+```{r}      
+pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 720:741, output= "Oklahoma_subset.pdf")      
+```      
+       
+       
+```{r}      
+oklahoma_file <- tabulizer::extract_text("Oklahoma_subset.pdf")      
+oklahoma_file2 <- str_split(oklahoma_file, "\n")      
+oklahoma_file3 <- oklahoma_file2[[1]]      
+final_oklahoma_file <- oklahoma_file3[133:length(oklahoma_file3)]      
+```      
+   
+      
+       
+```{r}      
+vector_company <- vector(mode="character", length=11)      
+       
+company_position <- 1      
+last_position <- 1      
+track_vector <- 1      
+tracking_data_frame <- 1      
+       
+oklahoma_company_code <- vector(mode="character")      
+oklahoma_company_name <- vector(mode="character")      
+oklahoma_company_eup <- vector(mode="character")      
+oklahoma_company_eor <- vector(mode="character")      
+oklahoma_company_ec <- vector(mode="character")      
+oklahoma_company_p <- vector(mode="character")      
+       
+       
+for (i in 3:length(final_oklahoma_file)) {      
+  if (str_detect(final_oklahoma_file[i], '35-')) {      
+    oklahoma_companies <- final_oklahoma_file[last_position:i-1]      
+          
+    vector_company_copy <- vector(mode="character", length=1)      
+          
+    for (k in 1:length(oklahoma_companies)) {      
+      if (str_detect(oklahoma_companies[k], '35-')) {      
+        vector_company[track_vector] <- oklahoma_companies[k]      
+        vector_company[track_vector+1] <- oklahoma_companies[k+1]      
+        track_vector <- track_vector + 2      
+              
+        vector_company_copy[1] <- oklahoma_companies[k]      
+        vector_company_copy[2] <- oklahoma_companies[k+1]      
+      }      
+            
+      if (str_detect(oklahoma_companies[k], "Utility Plant")) {      
+        vector_company[track_vector] <- oklahoma_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[3] <- oklahoma_companies[k]      
+      }      
+            
+      if (str_detect(oklahoma_companies[k], "Operating Revenue")) {      
+        vector_company[track_vector] <- oklahoma_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[4] <- oklahoma_companies[k]      
+      }      
+            
+      if (str_detect(oklahoma_companies[k], "Customers")) {      
+        vector_company[track_vector] <- oklahoma_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[5] <- oklahoma_companies[k]      
+      }      
+            
+      if(str_detect(oklahoma_companies[k], "Purchased")) {      
+        vector_company[track_vector] <- oklahoma_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[6] <- oklahoma_companies[k]      
+      }      
+    }      
+         
+    oklahoma_company_code[tracking_data_frame] <- vector_company_copy[1]      
+    oklahoma_company_name[tracking_data_frame] <- vector_company_copy[2]      
+          
+    if(str_detect(vector_company_copy[3], "Utility Plant") & !is.na(vector_company_copy[3])) {      
+      oklahoma_company_eup[tracking_data_frame] <- vector_company_copy[3]      
+    } else {      
+      oklahoma_company_eup[tracking_data_frame] <- NA      
+    }      
+          
+   if(str_detect(vector_company_copy[4], "Operating Revenue") & !is.na(vector_company_copy[4])) {      
+     oklahoma_company_eor[tracking_data_frame] <- vector_company_copy[4]      
+   } else {      
+     oklahoma_company_eor[tracking_data_frame] <- NA      
+   }      
+       
+   if(str_detect(vector_company_copy[5], "Customers") & !is.na(vector_company_copy[5])) {      
+     oklahoma_company_ec[tracking_data_frame] <- vector_company_copy[5]      
+   } else {      
+     oklahoma_company_ec[tracking_data_frame] <- NA      
+   }      
+       
+   if(str_detect(vector_company_copy[6], "Purchased") & !is.na(vector_company_copy[6])) {      
+     oklahoma_company_p[tracking_data_frame] <- vector_company_copy[6]      
+   } else {      
+     oklahoma_company_p[tracking_data_frame] <- NA      
+   }      
+       
+    tracking_data_frame <- tracking_data_frame + 1      
+    company_position <- company_position + 1      
+    last_position <- i+1      
+  }      
+}      
+```      
+       
+       
+```{r}
+for(i in 1:length(oklahoma_company_code)) {
+  if (startsWith(oklahoma_company_code[i], "3")) {
+    oklahoma_company_code[i] <- substr(oklahoma_company_code[i], 1, 7)
+  }
+}
+```
+   
+       
+```{r}      
+for (i in 1:length(oklahoma_company_code)) {      
+  if (startsWith(oklahoma_company_code[i], "3") == FALSE) {      
+    oklahoma_company_code[i] <- gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "",       
+                                     oklahoma_company_code[i], perl=T)      
+  }      
+}      
+       
+for (i in 1:length(oklahoma_company_eup)) {      
+  string <- oklahoma_company_eup[i]      
+  string_vector <- str_split(string, "\\$")      
+  oklahoma_company_eup[i] <- string_vector[[1]][2]      
+}      
+       
+for (i in 1:length(oklahoma_company_eup)) {      
+  string <- oklahoma_company_eup[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  oklahoma_company_eup[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(oklahoma_company_eup)) {      
+  if (oklahoma_company_eup[i] == "") {      
+    oklahoma_company_eup[i] <- NA      
+  }      
+}      
+       
+for (i in 1:length(oklahoma_company_eor)) {      
+  string <- oklahoma_company_eor[i]      
+  string_vector <- str_split(string, "\\$")      
+  oklahoma_company_eor[i] <- string_vector[[1]][2]      
+}      
+       
+for (i in 1:length(oklahoma_company_eor)) {      
+  string <- oklahoma_company_eor[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  oklahoma_company_eor[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(oklahoma_company_eor)) {      
+  if (oklahoma_company_eor[i] == "") {      
+    oklahoma_company_eor[i] <- NA      
+  }      
+}      
+       
+       
+for (i in 1:length(oklahoma_company_ec)) {      
+  string <- oklahoma_company_ec[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  oklahoma_company_ec[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(oklahoma_company_ec)) {      
+  if (oklahoma_company_ec[i] == "") {      
+    oklahoma_company_ec[i] <- NA      
+  }      
+}      
+       
+       
+for (i in 1:length(oklahoma_company_p)) {      
+  string <- oklahoma_company_p[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  oklahoma_company_p[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(oklahoma_company_p)) {      
+  if (oklahoma_company_p[i] == "") {      
+    oklahoma_company_p[i] <- NA      
+  }      
+}      
+       
+       
+state_name <- "Oklahoma"      
+table_oklahoma_company2 <- data.frame(oklahoma_company_name, state_name,       
+                                     oklahoma_company_code,       
+                                     oklahoma_company_eup, oklahoma_company_eor,      
+                                     oklahoma_company_ec, oklahoma_company_p)      
+       
+colnames(table_oklahoma_company2) = c("Company Name", "State", "Company Code",       
+                                     "Electric Utility Plant (dollars)",       
+                                     "Electric Operating Revenues (dollars)",      
+                                     "Electric Customers",       
+                                     "Energy Purchased (Kilowatt/hour)")      
+       
+write.csv (table_oklahoma_company2, file = paste0('oklahoma_table_company_1941', '.csv'))      
+```      
+ 
+ 

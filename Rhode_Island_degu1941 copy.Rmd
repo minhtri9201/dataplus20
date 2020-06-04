@@ -1,0 +1,244 @@
+---       
+title: "Testing in Rhode_island"       
+author: "Tri Truong"       
+date: "6/4/2020"       
+output:        
+  pdf_document: default       
+  html_document: default       
+---       
+        
+```{r setup, include=FALSE}       
+knitr::opts_chunk$set(echo = TRUE, comment = NA,        
+                      message = FALSE, warning = FALSE,       
+                      fig.height=6, fig.width = 9, fig.align = "center")       
+```       
+        
+# Packages       
+        
+```{r load-packages, message = FALSE}       
+library(stringr)       
+library(dplyr)       
+library(pdftools)       
+library(tidyverse)       
+library(pdftables)       
+library(qpdf)       
+library(rJava)       
+library(tabulizer)       
+library(tabulizerjars)       
+```       
+        
+# PDF       
+        
+```{r}       
+pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 792:795, output= "Rhode_island_subset.pdf")       
+```       
+        
+        
+```{r}       
+rhode_island_file <- tabulizer::extract_text("Rhode_island_subset.pdf")       
+rhode_island_file2 <- str_split(rhode_island_file, "\n")       
+rhode_island_file3 <- rhode_island_file2[[1]]       
+final_rhode_island_file <- rhode_island_file3[19:length(rhode_island_file3)]       
+```       
+    
+       
+        
+```{r}       
+vector_company <- vector(mode="character", length=11)       
+        
+company_position <- 1       
+last_position <- 1       
+track_vector <- 1       
+tracking_data_frame <- 1       
+        
+rhode_island_company_code <- vector(mode="character")       
+rhode_island_company_name <- vector(mode="character")       
+rhode_island_company_eup <- vector(mode="character")       
+rhode_island_company_eor <- vector(mode="character")       
+rhode_island_company_ec <- vector(mode="character")       
+rhode_island_company_p <- vector(mode="character")       
+        
+        
+for (i in 3:length(final_rhode_island_file)) {       
+  if (str_detect(final_rhode_island_file[i], '38-')) {       
+    rhode_island_companies <- final_rhode_island_file[last_position:i-1]       
+           
+    vector_company_copy <- vector(mode="character", length=1)       
+           
+    for (k in 1:length(rhode_island_companies)) {       
+      if (str_detect(rhode_island_companies[k], '38-')) {       
+        vector_company[track_vector] <- rhode_island_companies[k]       
+        vector_company[track_vector+1] <- rhode_island_companies[k+1]       
+        track_vector <- track_vector + 2       
+               
+        vector_company_copy[1] <- rhode_island_companies[k]       
+        vector_company_copy[2] <- rhode_island_companies[k+1]       
+      }       
+             
+      if (str_detect(rhode_island_companies[k], "Utility Plant")) {       
+        vector_company[track_vector] <- rhode_island_companies[k]       
+        track_vector <- track_vector + 1       
+               
+        vector_company_copy[3] <- rhode_island_companies[k]       
+      }       
+             
+      if (str_detect(rhode_island_companies[k], "Operating Revenue")) {       
+        vector_company[track_vector] <- rhode_island_companies[k]       
+        track_vector <- track_vector + 1       
+               
+        vector_company_copy[4] <- rhode_island_companies[k]       
+      }       
+             
+      if (str_detect(rhode_island_companies[k], "Customers")) {       
+        vector_company[track_vector] <- rhode_island_companies[k]       
+        track_vector <- track_vector + 1       
+               
+        vector_company_copy[5] <- rhode_island_companies[k]       
+      }       
+             
+      if(str_detect(rhode_island_companies[k], "Purchased")) {       
+        vector_company[track_vector] <- rhode_island_companies[k]       
+        track_vector <- track_vector + 1       
+               
+        vector_company_copy[6] <- rhode_island_companies[k]       
+      }       
+    }       
+          
+    rhode_island_company_code[tracking_data_frame] <- vector_company_copy[1]       
+    rhode_island_company_name[tracking_data_frame] <- vector_company_copy[2]       
+           
+    if(str_detect(vector_company_copy[3], "Utility Plant") & !is.na(vector_company_copy[3])) {       
+      rhode_island_company_eup[tracking_data_frame] <- vector_company_copy[3]       
+    } else {       
+      rhode_island_company_eup[tracking_data_frame] <- NA       
+    }       
+           
+   if(str_detect(vector_company_copy[4], "Operating Revenue") & !is.na(vector_company_copy[4])) {       
+     rhode_island_company_eor[tracking_data_frame] <- vector_company_copy[4]       
+   } else {       
+     rhode_island_company_eor[tracking_data_frame] <- NA       
+   }       
+        
+   if(str_detect(vector_company_copy[5], "Customers") & !is.na(vector_company_copy[5])) {       
+     rhode_island_company_ec[tracking_data_frame] <- vector_company_copy[5]       
+   } else {       
+     rhode_island_company_ec[tracking_data_frame] <- NA       
+   }       
+        
+   if(str_detect(vector_company_copy[6], "Purchased") & !is.na(vector_company_copy[6])) {       
+     rhode_island_company_p[tracking_data_frame] <- vector_company_copy[6]       
+   } else {       
+     rhode_island_company_p[tracking_data_frame] <- NA       
+   }       
+        
+    tracking_data_frame <- tracking_data_frame + 1       
+    company_position <- company_position + 1       
+    last_position <- i+1       
+  }       
+}       
+```       
+        
+```{r} 
+for(i in 1:length(rhode_island_company_code)) { 
+  if (startsWith(rhode_island_company_code[i], "3")) { 
+    rhode_island_company_code[i] <- substr(rhode_island_company_code[i], 1, 7) 
+  } 
+} 
+``` 
+        
+        
+```{r}       
+for (i in 1:length(rhode_island_company_code)) {       
+  if (startsWith(rhode_island_company_code[i], "3") == FALSE) {       
+    rhode_island_company_code[i] <- gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "",        
+                                     rhode_island_company_code[i], perl=T)       
+  }       
+}       
+        
+for (i in 1:length(rhode_island_company_eup)) {       
+  string <- rhode_island_company_eup[i]       
+  string_vector <- str_split(string, "\\$")       
+  rhode_island_company_eup[i] <- string_vector[[1]][2]       
+}       
+        
+for (i in 1:length(rhode_island_company_eup)) {       
+  string <- rhode_island_company_eup[i]       
+  m <- gregexpr('[0-9]+',string)       
+  something <- regmatches(string, m)       
+  something <- c(something[[1]])       
+  rhode_island_company_eup[i] <- paste(something, collapse = '')       
+}       
+        
+for (i in 1:length(rhode_island_company_eup)) {       
+  if (rhode_island_company_eup[i] == "") {       
+    rhode_island_company_eup[i] <- NA       
+  }       
+}       
+        
+for (i in 1:length(rhode_island_company_eor)) {       
+  string <- rhode_island_company_eor[i]       
+  string_vector <- str_split(string, "\\$")       
+  rhode_island_company_eor[i] <- string_vector[[1]][2]       
+}       
+        
+for (i in 1:length(rhode_island_company_eor)) {       
+  string <- rhode_island_company_eor[i]       
+  m <- gregexpr('[0-9]+',string)       
+  something <- regmatches(string, m)       
+  something <- c(something[[1]])       
+  rhode_island_company_eor[i] <- paste(something, collapse = '')       
+}       
+        
+for (i in 1:length(rhode_island_company_eor)) {       
+  if (rhode_island_company_eor[i] == "") {       
+    rhode_island_company_eor[i] <- NA       
+  }       
+}       
+        
+        
+for (i in 1:length(rhode_island_company_ec)) {       
+  string <- rhode_island_company_ec[i]       
+  m <- gregexpr('[0-9]+',string)       
+  something <- regmatches(string, m)       
+  something <- c(something[[1]])       
+  rhode_island_company_ec[i] <- paste(something, collapse = '')       
+}       
+        
+for (i in 1:length(rhode_island_company_ec)) {       
+  if (rhode_island_company_ec[i] == "") {       
+    rhode_island_company_ec[i] <- NA       
+  }       
+}       
+        
+        
+for (i in 1:length(rhode_island_company_p)) {       
+  string <- rhode_island_company_p[i]       
+  m <- gregexpr('[0-9]+',string)       
+  something <- regmatches(string, m)       
+  something <- c(something[[1]])       
+  rhode_island_company_p[i] <- paste(something, collapse = '')       
+}       
+        
+for (i in 1:length(rhode_island_company_p)) {       
+  if (rhode_island_company_p[i] == "") {       
+    rhode_island_company_p[i] <- NA       
+  }       
+}       
+        
+        
+state_name <- "Rhode Island"       
+table_rhode_island_company2 <- data.frame(rhode_island_company_name, state_name,        
+                                     rhode_island_company_code,        
+                                     rhode_island_company_eup, rhode_island_company_eor,       
+                                     rhode_island_company_ec, rhode_island_company_p)       
+        
+colnames(table_rhode_island_company2) = c("Company Name", "State", "Company Code",        
+                                     "Electric Utility Plant (dollars)",        
+                                     "Electric Operating Revenues (dollars)",       
+                                     "Electric Customers",        
+                                     "Energy Purchased (Kilowatt/hour)")       
+        
+write.csv (table_rhode_island_company2, file = paste0('rhode_island_table_company_1941', '.csv'))       
+```       
+ 
+ 

@@ -1,0 +1,236 @@
+---     
+title: "Testing in New_mexico"     
+author: "Tri Truong"     
+date: "6/4/2020"     
+output:      
+  pdf_document: default     
+  html_document: default     
+---     
+      
+```{r setup, include=FALSE}     
+knitr::opts_chunk$set(echo = TRUE, comment = NA,      
+                      message = FALSE, warning = FALSE,     
+                      fig.height=6, fig.width = 9, fig.align = "center")     
+```     
+      
+# Packages     
+      
+```{r load-packages, message = FALSE}     
+library(stringr)     
+library(dplyr)     
+library(pdftools)     
+library(tidyverse)     
+library(pdftables)     
+library(qpdf)     
+library(rJava)     
+library(tabulizer)     
+library(tabulizerjars)     
+```     
+      
+# PDF     
+      
+```{r}     
+pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 606:611, output= "New_mexico_subset.pdf")     
+```     
+      
+      
+```{r}     
+new_mexico_file <- tabulizer::extract_text("New_mexico_subset.pdf")     
+new_mexico_file2 <- str_split(new_mexico_file, "\n")     
+new_mexico_file3 <- new_mexico_file2[[1]]     
+final_new_mexico_file <- new_mexico_file3[42:length(new_mexico_file3)]     
+```     
+  
+     
+      
+```{r}     
+vector_company <- vector(mode="character", length=11)     
+      
+company_position <- 1     
+last_position <- 1     
+track_vector <- 1     
+tracking_data_frame <- 1     
+      
+new_mexico_company_code <- vector(mode="character")     
+new_mexico_company_name <- vector(mode="character")     
+new_mexico_company_eup <- vector(mode="character")     
+new_mexico_company_eor <- vector(mode="character")     
+new_mexico_company_ec <- vector(mode="character")     
+new_mexico_company_p <- vector(mode="character")     
+      
+      
+for (i in 3:length(final_new_mexico_file)) {     
+  if (str_detect(final_new_mexico_file[i], '30-')) {     
+    new_mexico_companies <- final_new_mexico_file[last_position:i-1]     
+         
+    vector_company_copy <- vector(mode="character", length=1)     
+         
+    for (k in 1:length(new_mexico_companies)) {     
+      if (str_detect(new_mexico_companies[k], '30-')) {     
+        vector_company[track_vector] <- new_mexico_companies[k]     
+        vector_company[track_vector+1] <- new_mexico_companies[k+1]     
+        track_vector <- track_vector + 2     
+             
+        vector_company_copy[1] <- new_mexico_companies[k]     
+        vector_company_copy[2] <- new_mexico_companies[k+1]     
+      }     
+           
+      if (str_detect(new_mexico_companies[k], "Utility Plant")) {     
+        vector_company[track_vector] <- new_mexico_companies[k]     
+        track_vector <- track_vector + 1     
+             
+        vector_company_copy[3] <- new_mexico_companies[k]     
+      }     
+           
+      if (str_detect(new_mexico_companies[k], "Operating Revenue")) {     
+        vector_company[track_vector] <- new_mexico_companies[k]     
+        track_vector <- track_vector + 1     
+             
+        vector_company_copy[4] <- new_mexico_companies[k]     
+      }     
+           
+      if (str_detect(new_mexico_companies[k], "Customers")) {     
+        vector_company[track_vector] <- new_mexico_companies[k]     
+        track_vector <- track_vector + 1     
+             
+        vector_company_copy[5] <- new_mexico_companies[k]     
+      }     
+           
+      if(str_detect(new_mexico_companies[k], "Purchased")) {     
+        vector_company[track_vector] <- new_mexico_companies[k]     
+        track_vector <- track_vector + 1     
+             
+        vector_company_copy[6] <- new_mexico_companies[k]     
+      }     
+    }     
+        
+    new_mexico_company_code[tracking_data_frame] <- vector_company_copy[1]     
+    new_mexico_company_name[tracking_data_frame] <- vector_company_copy[2]     
+         
+    if(str_detect(vector_company_copy[3], "Utility Plant") & !is.na(vector_company_copy[3])) {     
+      new_mexico_company_eup[tracking_data_frame] <- vector_company_copy[3]     
+    } else {     
+      new_mexico_company_eup[tracking_data_frame] <- NA     
+    }     
+         
+   if(str_detect(vector_company_copy[4], "Operating Revenue") & !is.na(vector_company_copy[4])) {     
+     new_mexico_company_eor[tracking_data_frame] <- vector_company_copy[4]     
+   } else {     
+     new_mexico_company_eor[tracking_data_frame] <- NA     
+   }     
+      
+   if(str_detect(vector_company_copy[5], "Customers") & !is.na(vector_company_copy[5])) {     
+     new_mexico_company_ec[tracking_data_frame] <- vector_company_copy[5]     
+   } else {     
+     new_mexico_company_ec[tracking_data_frame] <- NA     
+   }     
+      
+   if(str_detect(vector_company_copy[6], "Purchased") & !is.na(vector_company_copy[6])) {     
+     new_mexico_company_p[tracking_data_frame] <- vector_company_copy[6]     
+   } else {     
+     new_mexico_company_p[tracking_data_frame] <- NA     
+   }     
+      
+    tracking_data_frame <- tracking_data_frame + 1     
+    company_position <- company_position + 1     
+    last_position <- i+1     
+  }     
+}     
+```     
+      
+      
+```{r}     
+for (i in 1:length(new_mexico_company_code)) {     
+  if (startsWith(new_mexico_company_code[i], "3") == FALSE) {     
+    new_mexico_company_code[i] <- gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "",      
+                                     new_mexico_company_code[i], perl=T)     
+  }     
+}     
+      
+for (i in 1:length(new_mexico_company_eup)) {     
+  string <- new_mexico_company_eup[i]     
+  string_vector <- str_split(string, "\\$")     
+  new_mexico_company_eup[i] <- string_vector[[1]][2]     
+}     
+      
+for (i in 1:length(new_mexico_company_eup)) {     
+  string <- new_mexico_company_eup[i]     
+  m <- gregexpr('[0-9]+',string)     
+  something <- regmatches(string, m)     
+  something <- c(something[[1]])     
+  new_mexico_company_eup[i] <- paste(something, collapse = '')     
+}     
+      
+for (i in 1:length(new_mexico_company_eup)) {     
+  if (new_mexico_company_eup[i] == "") {     
+    new_mexico_company_eup[i] <- NA     
+  }     
+}     
+      
+for (i in 1:length(new_mexico_company_eor)) {     
+  string <- new_mexico_company_eor[i]     
+  string_vector <- str_split(string, "\\$")     
+  new_mexico_company_eor[i] <- string_vector[[1]][2]     
+}     
+      
+for (i in 1:length(new_mexico_company_eor)) {     
+  string <- new_mexico_company_eor[i]     
+  m <- gregexpr('[0-9]+',string)     
+  something <- regmatches(string, m)     
+  something <- c(something[[1]])     
+  new_mexico_company_eor[i] <- paste(something, collapse = '')     
+}     
+      
+for (i in 1:length(new_mexico_company_eor)) {     
+  if (new_mexico_company_eor[i] == "") {     
+    new_mexico_company_eor[i] <- NA     
+  }     
+}     
+      
+      
+for (i in 1:length(new_mexico_company_ec)) {     
+  string <- new_mexico_company_ec[i]     
+  m <- gregexpr('[0-9]+',string)     
+  something <- regmatches(string, m)     
+  something <- c(something[[1]])     
+  new_mexico_company_ec[i] <- paste(something, collapse = '')     
+}     
+      
+for (i in 1:length(new_mexico_company_ec)) {     
+  if (new_mexico_company_ec[i] == "") {     
+    new_mexico_company_ec[i] <- NA     
+  }     
+}     
+      
+      
+for (i in 1:length(new_mexico_company_p)) {     
+  string <- new_mexico_company_p[i]     
+  m <- gregexpr('[0-9]+',string)     
+  something <- regmatches(string, m)     
+  something <- c(something[[1]])     
+  new_mexico_company_p[i] <- paste(something, collapse = '')     
+}     
+      
+for (i in 1:length(new_mexico_company_p)) {     
+  if (new_mexico_company_p[i] == "") {     
+    new_mexico_company_p[i] <- NA     
+  }     
+}     
+      
+      
+state_name <- "New Mexico"     
+table_new_mexico_company2 <- data.frame(new_mexico_company_name, state_name,      
+                                     new_mexico_company_code,      
+                                     new_mexico_company_eup, new_mexico_company_eor,     
+                                     new_mexico_company_ec, new_mexico_company_p)     
+      
+colnames(table_new_mexico_company2) = c("Company Name", "State", "Company Code",      
+                                     "Electric Utility Plant (dollars)",      
+                                     "Electric Operating Revenues (dollars)",     
+                                     "Electric Customers",      
+                                     "Energy Purchased (Kilowatt/hour)")     
+      
+write.csv (table_new_mexico_company2, file = paste0('new_mexico_table_company_1941', '.csv'))     
+```     
+ 
+ 

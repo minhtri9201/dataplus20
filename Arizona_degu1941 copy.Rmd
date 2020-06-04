@@ -1,0 +1,248 @@
+---
+title: "Testing in Arizona"
+author: "Tri Truong"
+date: "6/2/2020"
+output: 
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, comment = NA, 
+                      message = FALSE, warning = FALSE,
+                      fig.height=6, fig.width = 9, fig.align = "center")
+```
+
+# Packages
+
+```{r load-packages, message = FALSE}
+library(stringr)
+library(dplyr)
+library(pdftools)
+library(tidyverse)
+library(pdftables)
+library(qpdf)
+library(rJava)
+library(tabulizer)
+library(tabulizerjars)
+```
+
+# PDF
+
+```{r load_pdf_Alabama}
+pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 100:109, output= "Arizona_subset.pdf")
+```
+
+```{r}
+arizona_file <- tabulizer::extract_text("Arizona_subset.pdf")
+arizona_file2 <- str_split(arizona_file, "\n")
+arizona_file3 <- arizona_file2[[1]]
+final_arizona_file <- arizona_file3[61:length(arizona_file3)]
+```
+
+
+```{r}
+vector_company <- vector(mode="character", length=11)
+
+company_position <- 1
+last_position <- 1
+track_vector <- 1
+tracking_data_frame <- 1
+
+arizona_company_code <- vector(mode="character")
+arizona_company_name <- vector(mode="character")
+arizona_company_eup <- vector(mode="character")
+arizona_company_eor <- vector(mode="character")
+arizona_company_ec <- vector(mode="character")
+arizona_company_p <- vector(mode="character")
+
+
+for (i in 3:length(final_arizona_file)) {
+  if (str_detect(final_arizona_file[i], '02-')) {
+    arizona_companies <- final_arizona_file[last_position:i-1]
+    
+    vector_company_copy <- vector(mode="character", length=1)
+    
+    for (k in 1:length(arizona_companies)) {
+      if (str_detect(arizona_companies[k], '02-')) {
+        vector_company[track_vector] <- arizona_companies[k]
+        vector_company[track_vector+1] <- arizona_companies[k+1]
+        track_vector <- track_vector + 2
+        
+        vector_company_copy[1] <- arizona_companies[k]
+        vector_company_copy[2] <- arizona_companies[k+1]
+      }
+      
+      if (str_detect(arizona_companies[k], "Utility Plant")) {
+        vector_company[track_vector] <- arizona_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[3] <- arizona_companies[k]
+      }
+      
+      if (str_detect(arizona_companies[k], "Operating Revenue")) {
+        vector_company[track_vector] <- arizona_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[4] <- arizona_companies[k]
+      }
+      
+      if (str_detect(arizona_companies[k], "Customers")) {
+        vector_company[track_vector] <- arizona_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[5] <- arizona_companies[k]
+      }
+      
+      if(str_detect(arizona_companies[k], "Purchased")) {
+        vector_company[track_vector] <- arizona_companies[k]
+        track_vector <- track_vector + 1
+        
+        vector_company_copy[6] <- arizona_companies[k]
+      }
+    }
+    
+    arizona_company_code[tracking_data_frame] <- vector_company_copy[1]
+    arizona_company_name[tracking_data_frame] <- vector_company_copy[2]
+    
+    if(str_detect(vector_company_copy[3], "Utility Plant") & !is.na(vector_company_copy[3])) {
+      arizona_company_eup[tracking_data_frame] <- vector_company_copy[3]
+    } else {
+      arizona_company_eup[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[4], "Operating Revenue") & !is.na(vector_company_copy[4])) {
+      arizona_company_eor[tracking_data_frame] <- vector_company_copy[4]
+    } else {
+      arizona_company_eor[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[5], "Customers") & !is.na(vector_company_copy[5])) {
+      arizona_company_ec[tracking_data_frame] <- vector_company_copy[5]
+    } else {
+      arizona_company_ec[tracking_data_frame] <- NA
+    }
+    
+    if(str_detect(vector_company_copy[6], "Purchased") & !is.na(vector_company_copy[6])) {
+      arizona_company_p[tracking_data_frame] <- vector_company_copy[6]
+    } else {
+      arizona_company_p[tracking_data_frame] <- NA
+    }
+
+    tracking_data_frame <- tracking_data_frame + 1
+    company_position <- company_position + 1
+    last_position <- i+1
+  }
+}
+```
+
+
+
+
+
+```{r}
+for (i in 1:length(arizona_company_code)) {
+  if (startsWith(arizona_company_code[i], "0") == FALSE) {
+    arizona_company_code[i] <- gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "", arizona_company_code[i], perl=T)
+  }
+}
+
+
+for (i in 1:length(arizona_company_eup)) {
+  string <- arizona_company_eup[i]
+  string_vector <- str_split(string, "\\$")
+  arizona_company_eup[i] <- string_vector[[1]][2]
+}
+
+for (i in 1:length(arizona_company_eup)) {
+  string <- arizona_company_eup[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arizona_company_eup[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arizona_company_eup)) {
+  if (arizona_company_eup[i] == "") {
+    arizona_company_eup[i] <- NA
+  }
+}
+
+for (i in 1:length(arizona_company_eor)) {
+  string <- arizona_company_eor[i]
+  string_vector <- str_split(string, "\\$")
+  arizona_company_eor[i] <- string_vector[[1]][2]
+}
+
+for (i in 1:length(arizona_company_eor)) {
+  string <- arizona_company_eor[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arizona_company_eor[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arizona_company_eor)) {
+  if (arizona_company_eor[i] == "") {
+    arizona_company_eor[i] <- NA
+  }
+}
+
+
+for (i in 1:length(arizona_company_ec)) {
+  string <- arizona_company_ec[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arizona_company_ec[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arizona_company_ec)) {
+  if (arizona_company_ec[i] == "") {
+    arizona_company_ec[i] <- NA
+  }
+}
+
+
+for (i in 1:length(arizona_company_p)) {
+  string <- arizona_company_p[i]
+  m <- gregexpr('[0-9]+',string)
+  something <- regmatches(string, m)
+  something <- c(something[[1]])
+  arizona_company_p[i] <- paste(something, collapse = '')
+}
+
+for (i in 1:length(arizona_company_p)) {
+  if (arizona_company_p[i] == "") {
+    arizona_company_p[i] <- NA
+  }
+}
+
+
+state_name <- "Arizona"
+table_arizona_company2 <- data.frame(arizona_company_name, state_name, 
+                                     arizona_company_code, 
+                                     arizona_company_eup, arizona_company_eor,
+                                     arizona_company_ec, arizona_company_p)
+
+colnames(table_arizona_company2) = c("Company Name", "State", "Company Code", 
+                                     "Electric Utility Plant (dollars)", 
+                                     "Electric Operating Revenues (dollars)",
+                                     "Electric Customers", 
+                                     "Energy Purchased (Kilowatt/hour)")
+
+write.csv (table_arizona_company2, file = paste0('arizona_table_company_1941', '.csv'))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
