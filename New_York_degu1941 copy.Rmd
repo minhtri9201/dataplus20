@@ -1,0 +1,276 @@
+---      
+title: "Testing in New_york"      
+author: "Tri Truong"      
+date: "6/4/2020"      
+output:       
+  pdf_document: default      
+  html_document: default      
+---      
+       
+```{r setup, include=FALSE}      
+knitr::opts_chunk$set(echo = TRUE, comment = NA,       
+                      message = FALSE, warning = FALSE,      
+                      fig.height=6, fig.width = 9, fig.align = "center")      
+```      
+       
+# Packages      
+       
+```{r load-packages, message = FALSE}      
+library(stringr)      
+library(dplyr)      
+library(pdftools)      
+library(tidyverse)      
+library(pdftables)      
+library(qpdf)      
+library(rJava)      
+library(tabulizer)      
+library(tabulizerjars)      
+```      
+       
+# PDF      
+       
+```{r}      
+pdf_subset("1941.Directory of electric utilities in the US pdf.pdf", page= 612:645, output= "New_york_subset.pdf")      
+```      
+       
+       
+```{r}      
+new_york_file <- tabulizer::extract_text("New_york_subset.pdf")      
+new_york_file2 <- str_split(new_york_file, "\n")      
+new_york_file3 <- new_york_file2[[1]]      
+final_new_york_file <- new_york_file3[167:length(new_york_file3)]      
+```      
+   
+
+      
+       
+```{r}      
+vector_company <- vector(mode="character", length=11)      
+       
+company_position <- 1      
+last_position <- 1      
+track_vector <- 1      
+tracking_data_frame <- 1      
+       
+new_york_company_code <- vector(mode="character")      
+new_york_company_name <- vector(mode="character")      
+new_york_company_eup <- vector(mode="character")      
+new_york_company_eor <- vector(mode="character")      
+new_york_company_ec <- vector(mode="character")      
+new_york_company_p <- vector(mode="character")      
+       
+       
+for (i in 3:length(final_new_york_file)) {      
+  if (str_detect(final_new_york_file[i], '31-')) {      
+    new_york_companies <- final_new_york_file[last_position:i-1]      
+          
+    vector_company_copy <- vector(mode="character", length=1)      
+          
+    for (k in 1:length(new_york_companies)) {      
+      if (str_detect(new_york_companies[k], '31-')) {      
+        vector_company[track_vector] <- new_york_companies[k]      
+        vector_company[track_vector+1] <- new_york_companies[k+1]      
+        track_vector <- track_vector + 2      
+              
+        vector_company_copy[1] <- new_york_companies[k]      
+        vector_company_copy[2] <- new_york_companies[k+1]      
+      }      
+            
+      if (str_detect(new_york_companies[k], "Utility Plant")) {  
+        
+        if (str_detect(new_york_companies[k], "[0-9+]") == FALSE) {
+          new_string <- paste(new_york_companies[k], new_york_companies[k+1])
+        }
+        else {
+          new_string <- new_york_companies[k]
+        }
+        
+        vector_company[track_vector] <- new_york_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[3] <- new_string     
+      }      
+            
+      if (str_detect(new_york_companies[k], "Operating Revenue")) {      
+        
+        if (str_detect(new_york_companies[k], "[0-9+]") == FALSE) {
+          new_string <- paste(new_york_companies[k], new_york_companies[k+1])
+        }
+        else {
+          new_string <- new_york_companies[k]
+        }
+        
+        vector_company[track_vector] <- new_york_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[4] <- new_string    
+      }      
+            
+      if (str_detect(new_york_companies[k], "Customers")) {  
+        
+        if (str_detect(new_york_companies[k], "[0-9+]") == FALSE) {
+          new_string <- paste(new_york_companies[k], new_york_companies[k+1])
+        }
+        else {
+          new_string <- new_york_companies[k]
+        }
+        
+        vector_company[track_vector] <- new_york_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[5] <- new_string   
+      }      
+            
+      if(str_detect(new_york_companies[k], "Purchased")) {     
+        
+        if (str_detect(new_york_companies[k], "[0-9+]") == FALSE) {
+          new_string <- paste(new_york_companies[k], new_york_companies[k+1])
+        }
+        else {
+          new_string <- new_york_companies[k]
+        }
+        
+        vector_company[track_vector] <- new_york_companies[k]      
+        track_vector <- track_vector + 1      
+              
+        vector_company_copy[6] <- new_string    
+      }      
+    }      
+         
+    new_york_company_code[tracking_data_frame] <- vector_company_copy[1]      
+    new_york_company_name[tracking_data_frame] <- vector_company_copy[2]      
+          
+    if(str_detect(vector_company_copy[3], "Utility Plant") & !is.na(vector_company_copy[3])) {      
+      new_york_company_eup[tracking_data_frame] <- vector_company_copy[3]      
+    } else {      
+      new_york_company_eup[tracking_data_frame] <- NA      
+    }      
+          
+   if(str_detect(vector_company_copy[4], "Operating Revenue") & !is.na(vector_company_copy[4])) {      
+     new_york_company_eor[tracking_data_frame] <- vector_company_copy[4]      
+   } else {      
+     new_york_company_eor[tracking_data_frame] <- NA      
+   }      
+       
+   if(str_detect(vector_company_copy[5], "Customers") & !is.na(vector_company_copy[5])) {      
+     new_york_company_ec[tracking_data_frame] <- vector_company_copy[5]      
+   } else {      
+     new_york_company_ec[tracking_data_frame] <- NA      
+   }      
+       
+   if(str_detect(vector_company_copy[6], "Purchased") & !is.na(vector_company_copy[6])) {      
+     new_york_company_p[tracking_data_frame] <- vector_company_copy[6]      
+   } else {      
+     new_york_company_p[tracking_data_frame] <- NA      
+   }      
+       
+    tracking_data_frame <- tracking_data_frame + 1      
+    company_position <- company_position + 1      
+    last_position <- i+1      
+  }      
+}      
+```      
+       
+       
+```{r}      
+for (i in 1:length(new_york_company_code)) {      
+  if (startsWith(new_york_company_code[i], "3") == FALSE) {      
+    new_york_company_code[i] <- gsub("(?<=\\()[^()]*(?=\\))(*SKIP)(*F)|.", "",       
+                                     new_york_company_code[i], perl=T)      
+  }      
+}      
+       
+for (i in 1:length(new_york_company_eup)) {      
+  string <- new_york_company_eup[i]      
+  string_vector <- str_split(string, "\\$")      
+  new_york_company_eup[i] <- string_vector[[1]][2]      
+}      
+       
+for (i in 1:length(new_york_company_eup)) {      
+  string <- new_york_company_eup[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  new_york_company_eup[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(new_york_company_eup)) {      
+  if (new_york_company_eup[i] == "") {      
+    new_york_company_eup[i] <- NA      
+  }      
+}      
+       
+for (i in 1:length(new_york_company_eor)) {      
+  string <- new_york_company_eor[i]      
+  string_vector <- str_split(string, "\\$")      
+  new_york_company_eor[i] <- string_vector[[1]][2]      
+}      
+       
+for (i in 1:length(new_york_company_eor)) {      
+  string <- new_york_company_eor[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  new_york_company_eor[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(new_york_company_eor)) {      
+  if (new_york_company_eor[i] == "") {      
+    new_york_company_eor[i] <- NA      
+  }      
+}      
+       
+       
+for (i in 1:length(new_york_company_ec)) {      
+  string <- new_york_company_ec[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  new_york_company_ec[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(new_york_company_ec)) {      
+  if (new_york_company_ec[i] == "") {      
+    new_york_company_ec[i] <- NA      
+  }      
+}      
+       
+for (i in 1:length(new_york_company_p)) {
+  string <- new_york_company_p[i]
+  something <- gregexpr(pattern ='Purchased', string)
+  something <- something[[1]]
+  something <- something[1]
+  new_york_company_p[i] <- substr(string, something, nchar(string))
+}
+       
+for (i in 1:length(new_york_company_p)) {      
+  string <- new_york_company_p[i]      
+  m <- gregexpr('[0-9]+',string)      
+  something <- regmatches(string, m)      
+  something <- c(something[[1]])      
+  new_york_company_p[i] <- paste(something, collapse = '')      
+}      
+       
+for (i in 1:length(new_york_company_p)) {      
+  if (new_york_company_p[i] == "") {      
+    new_york_company_p[i] <- NA      
+  }      
+}      
+       
+       
+state_name <- "New York"      
+table_new_york_company2 <- data.frame(new_york_company_name, state_name,       
+                                     new_york_company_code,       
+                                     new_york_company_eup, new_york_company_eor,      
+                                     new_york_company_ec, new_york_company_p)      
+       
+colnames(table_new_york_company2) = c("Company Name", "State", "Company Code",       
+                                     "Electric Utility Plant (dollars)",       
+                                     "Electric Operating Revenues (dollars)",      
+                                     "Electric Customers",       
+                                     "Energy Purchased (Kilowatt/hour)")      
+       
+write.csv (table_new_york_company2, file = paste0('new_york_table_company_1941', '.csv'))      
+```      
+ 
+ 
